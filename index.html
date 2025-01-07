@@ -1,0 +1,117 @@
+import pygame
+import sys
+
+# Initialize pygame
+pygame.init()
+
+# Game window dimensions
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Parkour Game")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+
+# Player settings
+player_width = 50
+player_height = 50
+player_x = 100
+player_y = SCREEN_HEIGHT - player_height - 100
+player_velocity = 5
+jumping = False
+falling = False
+y_velocity = 0
+gravity = 0.8
+jump_strength = 15
+
+# Block settings
+blocks = [
+    pygame.Rect(100, SCREEN_HEIGHT - 200, 200, 20),
+    pygame.Rect(350, SCREEN_HEIGHT - 300, 200, 20),
+    pygame.Rect(600, SCREEN_HEIGHT - 400, 200, 20),
+]
+
+# Checkpoint settings
+checkpoint = pygame.Rect(650, SCREEN_HEIGHT - 500, 50, 50)
+checkpoint_reached = False
+
+# Clock for controlling frame rate
+clock = pygame.time.Clock()
+
+# Game loop
+while True:
+    screen.fill(WHITE)
+
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    # Get the keys pressed
+    keys = pygame.key.get_pressed()
+
+    # Move player left and right
+    if keys[pygame.K_LEFT]:
+        player_x -= player_velocity
+    if keys[pygame.K_RIGHT]:
+        player_x += player_velocity
+
+    # Jumping mechanic
+    if keys[pygame.K_SPACE] and not jumping and not falling:
+        jumping = True
+        y_velocity = -jump_strength
+
+    # Apply gravity
+    if jumping or falling:
+        y_velocity += gravity
+        player_y += y_velocity
+
+    # Check collision with blocks (platforms)
+    on_ground = False
+    for block in blocks:
+        if player_y + player_height <= block.top and player_y + player_height + y_velocity >= block.top:
+            if block.left < player_x + player_width // 2 < block.right:
+                player_y = block.top - player_height
+                y_velocity = 0
+                jumping = False
+                falling = False
+                on_ground = True
+                break
+
+    if not on_ground and player_y + player_height < SCREEN_HEIGHT:
+        falling = True
+    else:
+        falling = False
+
+    # Check if player reaches checkpoint
+    if checkpoint.colliderect(pygame.Rect(player_x, player_y, player_width, player_height)):
+        checkpoint_reached = True
+
+    # Draw the player (block)
+    player_rect = pygame.Rect(player_x, player_y, player_width, player_height)
+    pygame.draw.rect(screen, GREEN, player_rect)
+
+    # Draw blocks
+    for block in blocks:
+        pygame.draw.rect(screen, BLACK, block)
+
+    # Draw checkpoint
+    if not checkpoint_reached:
+        pygame.draw.rect(screen, RED, checkpoint)
+
+    # Display checkpoint reached message
+    if checkpoint_reached:
+        font = pygame.font.SysFont("Arial", 30)
+        text = font.render("Checkpoint Reached!", True, (0, 0, 0))
+        screen.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2))
+
+    # Update the screen
+    pygame.display.flip()
+
+    # Cap the frame rate
+    clock.tick(60)
