@@ -47,12 +47,65 @@ const enemyShootSound = new Audio('enemy-shoot.mp3');
 const explosionSound = new Audio('explosion.mp3');
 const bossSound = new Audio('boss-sound.mp3');
 
+// Loading screen elements
+let assetsLoaded = false;
+let totalAssets = 7;  // Number of assets to load (sounds, images, etc.)
+let loadedAssets = 0;
+
 // Key tracking for player movement and shooting
 let keys = {};
 
 // Event listeners for keydown and keyup
 window.addEventListener('keydown', (e) => keys[e.code] = true);
 window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+// Asset loading function
+function loadAssets() {
+    shootSound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+    hitTargetSound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+    hitEnemySound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+    enemyShootSound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+    explosionSound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+    bossSound.onload = function() { loadedAssets++; updateLoadingScreen(); };
+
+    // Simulate loading other assets here (images, etc.)
+    // Example: You can load images like this:
+    // const someImage = new Image();
+    // someImage.src = 'path/to/image.png';
+    // someImage.onload = () => {
+    //   loadedAssets++;
+    //   updateLoadingScreen();
+    // }
+
+    // Begin loading sounds
+    shootSound.src = 'shoot.mp3';
+    hitTargetSound.src = 'hit-target.mp3';
+    hitEnemySound.src = 'hit-enemy.mp3';
+    enemyShootSound.src = 'enemy-shoot.mp3';
+    explosionSound.src = 'explosion.mp3';
+    bossSound.src = 'boss-sound.mp3';
+}
+
+// Update the loading screen
+function updateLoadingScreen() {
+    if (loadedAssets === totalAssets) {
+        assetsLoaded = true;
+        startGame();
+    }
+
+    // Draw loading screen
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    ctx.fillStyle = 'white';
+    ctx.font = '30px Arial';
+    ctx.fillText('Loading... ' + Math.floor((loadedAssets / totalAssets) * 100) + '%', SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2);
+}
+
+// Game start function
+function startGame() {
+    // Hide the loading screen and start the game loop
+    gameLoop();
+}
 
 // Bullet class
 class Bullet {
@@ -164,110 +217,14 @@ class Enemy {
     }
 }
 
-// Boss class (Advanced with multiple attack phases and special moves)
-class Boss {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.health = type === 'Stage1' ? 100 : 200;
-        this.speed = 2;
-        this.type = type;
-        this.lastShotTime = Date.now();
-        this.attackPhase = 1; // Phase 1 at the start
-        this.minions = [];
-        this.specialMoveCooldown = 0;
+// Game loop function
+function gameLoop() {
+    if (!assetsLoaded) {
+        return; // Do nothing until assets are loaded
     }
 
-    move() {
-        const dx = playerX - this.x;
-        const dy = playerY - this.y;
-        const angle = Math.atan2(dy, dx);
-        this.x += this.speed * Math.cos(angle);
-        this.y += this.speed * Math.sin(angle);
-    }
-
-    shoot() {
-        if (this.attackPhase === 1) {
-            // Phase 1: Regular attack
-            if (Date.now() - this.lastShotTime > 1000) {
-                let angle = Math.atan2(playerY - this.y, playerX - this.x);
-                bullets.push(new Bullet(this.x + bossWidth / 2, this.y + bossHeight / 2, angle, 10));
-                enemyShootSound.play();
-                this.lastShotTime = Date.now();
-            }
-        } else if (this.attackPhase === 2) {
-            // Phase 2: Split attack pattern
-            if (Date.now() - this.lastShotTime > 500) {
-                let angles = [-Math.PI / 4, 0, Math.PI / 4];
-                angles.forEach(angle => {
-                    bullets.push(new Bullet(this.x + bossWidth / 2, this.y + bossHeight / 2, angle, 10));
-                });
-                enemyShootSound.play();
-                this.lastShotTime = Date.now();
-            }
-        } else if (this.attackPhase === 3) {
-            // Phase 3: AoE (Area of Effect) attack
-            if (Date.now() - this.specialMoveCooldown > 3000) {
-                // Launch an AoE attack in all directions
-                for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 4) {
-                    bullets.push(new Bullet(this.x + bossWidth / 2, this.y + bossHeight / 2, angle, 15));
-                }
-                explosionSound.play();
-                this.specialMoveCooldown = Date.now();
-            }
-        }
-    }
-
-    draw() {
-        ctx.fillStyle = this.type === 'Stage1' ? 'orange' : 'red';
-        ctx.fillRect(this.x, this.y, bossWidth, bossHeight);
-    }
-
-    takeDamage(amount) {
-        this.health -= amount;
-        if (this.health <= 0) {
-            explosionSound.play();
-            score += 100;
-            return true;
-        }
-        return false;
-    }
-
-    summonMinions() {
-        if (this.type === 'Stage2' && this.minions.length === 0) {
-            for (let i = 0; i < 3; i++) {
-                this.minions.push(new Enemy(this.x + Math.random() * 50, this.y + Math.random() * 50, 2, 1000));
-            }
-        }
-    }
-
-    switchPhase() {
-        if (this.attackPhase === 1 && this.health <= 50) {
-            this.attackPhase = 2;
-        } else if (this.attackPhase === 2 && this.health <= 25) {
-            this.attackPhase = 3;
-        }
-    }
-}
-
-// Create random target
-function createTarget() {
-    const x = Math.random() * (SCREEN_WIDTH - targetWidth);
-    const y = Math.random() * (SCREEN_HEIGHT - 200);
-    targets.push(new Target(x, y, Math.random() * 2 + 2));
-}
-
-// Create random power-up
-function createPowerUp() {
-    const x = Math.random() * (SCREEN_WIDTH - powerUpWidth);
-    const y = Math.random() * (SCREEN_HEIGHT - 200);
-    const type = Math.random() > 0.5 ? 'doubleDamage' : 'rapidFire';
-    powerUps.push(new PowerUp(x, y, type));
-}
-
-// Update game state
-function update() {
-    if (gameOver) return;
+    // Clear canvas
+    ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Handle player movement
     if (keys['ArrowLeft']) playerX -= playerSpeed;
@@ -292,50 +249,22 @@ function update() {
 
     // Shoot bullet (Rapid Fire Power-Up)
     if (keys['Space']) {
-        if (rapidFire || Date.now() - lastShotTime > 200) {
-            let damage = doubleDamage ? 20 : 10;
-            bullets.push(new Bullet(playerX + playerWidth / 2, playerY + playerHeight / 2, playerAngle, damage));
-            shootSound.play();
-            lastShotTime = Date.now();
-        }
+        let damage = doubleDamage ? 20 : 10;
+        bullets.push(new Bullet(playerX + playerWidth / 2, playerY + playerHeight / 2, playerAngle, damage));
+        shootSound.play();
     }
 
     // Shoot second player bullet
     if (keys['Enter']) {
-        if (rapidFire || Date.now() - lastShotTime > 200) {
-            let damage = doubleDamage ? 20 : 10;
-            bullets.push(new Bullet(secondPlayerX + playerWidth / 2, secondPlayerY + playerHeight / 2, secondPlayerAngle, damage));
-            shootSound.play();
-            lastShotTime = Date.now();
-        }
+        let damage = doubleDamage ? 20 : 10;
+        bullets.push(new Bullet(secondPlayerX + playerWidth / 2, secondPlayerY + playerHeight / 2, secondPlayerAngle, damage));
+        shootSound.play();
     }
 
     // Move bullets and check for collisions with targets and enemies
     bullets.forEach(bullet => {
         bullet.move();
         bullet.draw();
-
-        targets.forEach((target, index) => {
-            if (target.checkCollision(bullet)) {
-                score += 10;
-                targets.splice(index, 1); // Remove target
-                hitTargetSound.play();
-                explosionSound.play();
-            }
-        });
-
-        enemies.forEach((enemy, index) => {
-            if (enemy.checkCollision(bullet)) {
-                enemies.splice(index, 1); // Remove enemy
-                hitEnemySound.play();
-                explosionSound.play();
-            }
-        });
-
-        if (boss && boss.takeDamage(bullet.damage)) {
-            enemies = []; // Remove all enemies after boss is defeated
-            boss = null;  // Remove boss
-        }
     });
 
     // Update and move targets
@@ -350,15 +279,6 @@ function update() {
         enemy.draw();
         enemy.shoot();
     });
-
-    // Update boss
-    if (boss) {
-        boss.move();
-        boss.shoot();
-        boss.summonMinions();
-        boss.switchPhase();
-        boss.draw();
-    }
 
     // Update power-ups
     powerUps.forEach((powerUp, index) => {
@@ -389,22 +309,5 @@ function update() {
     ctx.font = '20px Arial';
     ctx.fillText(`Score: ${score}`, 20, 30);
     ctx.fillText(`Time: ${elapsedTime}s`, SCREEN_WIDTH - 150, 30);
-
-    // Game Over logic
-    if (targets.length === 0) {
-        if (boss == null) {
-            // Boss level
-            boss = new Boss(SCREEN_WIDTH / 2 - bossWidth / 2, 50, level % 2 === 0 ? 'Stage2' : 'Stage1');
-        } else {
-            gameOver = true;
-            ctx.fillStyle = 'white';
-            ctx.font = '40px Arial';
-            ctx.fillText('GAME OVER', SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2);
-        }
-    }
 }
 
-// Start game loop
-let lastShotTime = Date.now();
-createTarget();
-gameLoop();
