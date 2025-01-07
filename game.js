@@ -8,7 +8,7 @@ const SCREEN_HEIGHT = canvas.height;
 const playerWidth = 50;
 const playerHeight = 50;
 const playerVelocity = 5;
-const jumpStrength = 15;
+const jumpStrength = 25;
 const gravity = 0.8;
 
 let playerX = 100;
